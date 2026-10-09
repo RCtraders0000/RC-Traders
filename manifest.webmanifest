@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "RC Traders Fashion & Footwear",
+  "short_name": "RC Traders",
+  "description": "Aapke local area ka fashion aur footwear store.",
+  "lang": "hi-IN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f7f4",
+  "theme_color": "#215c40",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
+
