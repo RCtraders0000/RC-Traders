@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Owner membership is provisioned manually in the Firebase Console.
+    // No client, including an authenticated one, may grant itself owner access.
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    // Product catalog is public to browse. Only the provisioned owner can edit it.
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isOwner()
+        && request.resource.data.keys().hasAll(['name', 'cat', 'price', 'unit', 'emoji', 'stock', 'tag', 'color'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.cat is string
+        && request.resource.data.cat.size() > 0
+        && request.resource.data.cat.size() <= 60
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && request.resource.data.unit is string
+        && request.resource.data.unit.size() <= 100
+        && request.resource.data.stock is int
+        && request.resource.data.stock >= 0;
+      allow update: if isOwner()
+        && request.resource.data.keys().hasAll(['name', 'cat', 'price', 'unit', 'emoji', 'stock', 'tag', 'color'])
+        && request.resource.data.name is string
+        && request.resource.data.cat is string
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && request.resource.data.stock is int
+        && request.resource.data.stock >= 0;
+      allow delete: if isOwner();
+    }
+
+    // Customers can submit an order. Only the owner can read or update order details.
+    match /orders/{orderId} {
+      allow create: if request.resource.data.keys().hasAll([
+          'customerName', 'phone', 'address', 'payment', 'items', 'total', 'status', 'createdAt'
+        ])
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() > 0
+        && request.resource.data.customerName.size() <= 100
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^[0-9]{10}$')
+        && request.resource.data.address is string
+        && request.resource.data.address.size() > 0
+        && request.resource.data.address.size() <= 500
+        && request.resource.data.payment == 'Cash on delivery'
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 30
+        && request.resource.data.total is number
+        && request.resource.data.total > 0
+        && request.resource.data.status == 'Naya order'
+        && request.resource.data.createdAt is int;
+      allow read: if isOwner();
+      allow update: if isOwner()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['Naya order', 'Delivery ke liye taiyaar', 'Deliver ho gaya'];
+      allow delete: if false;
+    }
+  }
+}
+
